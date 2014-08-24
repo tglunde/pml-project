@@ -45,7 +45,7 @@ require(randomForest)
 set.seed(4242)
 rfMDL <- randomForest(classe~., data=train, na.action=na.fail, ntree=502)
 print(rfMDL)
-par(mfrow=c(1,2)) ; varImpPlot(rfMDL)
+par(mfrow=c(1,1)) ; varImpPlot(rfMDL,sort=TRUE)
 ```
 
 And we can predict using the test data:
