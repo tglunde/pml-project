@@ -9,16 +9,53 @@ Background <http://groupware.les.inf.puc-rio.br/har>.
 
 Data being used: <https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv>
 
+First we are loading the data and do some exploration.
+
 ```{r}
-download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", method = "curl", destfile="training.csv")
-training <- read.csv("training.csv")
-hist(training$classe)
+if(!file.exists("training.csv")) {
+  download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", method = "curl", destfile="training.csv")  
+}
+if(!exists('training')) training <- read.csv("training.csv")
+dim(training)
+colnames(training)
+training$classe <- as.factor(training$classe)
+classe <- as.factor(training$classe)
 ```
 
-You can also embed plots, for example:
+* We ignore the fact exercises are being executed by different persons and also the time variance - that people might get tired doing the exercises one after each other.
+* We remove all features that are non-numeric, have NAs or 
 
-```{r, echo=FALSE}
-plot(cars)
+```{r}
+tmp <- training
+tmp <- tmp[,which(as.numeric(colSums(is.na(tmp)))==0)]
+tmp <- tmp[,which(sapply(tmp,class)!='factor')]
+tmp <- subset(tmp, select=-X)
+tmp <- subset(tmp, select=-raw_timestamp_part_1)
+tmp <- subset(tmp, select=-raw_timestamp_part_2)
+tmp <- subset(tmp, select=-num_window)
+train <- cbind(classe,tmp)
+
+colnames(train)
+summary(train)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+Finally we are fitting the random forest model looking at feature importance:
+```{r}
+require(randomForest)
+set.seed(4242)
+rfMDL <- randomForest(classe~., data=train, na.action=na.fail, ntree=502)
+print(rfMDL)
+par(mfrow=c(1,1)) ; varImpPlot(rfMDL,sort=TRUE)
+```
+
+And we can predict using the test data:
+```{r}
+set.seed(4242)
+if(!file.exists("pml-testing.csv")) {
+  download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv", method = "curl", destfile="pml-testing.csv")  
+}
+if(!exists('testing')) testing <- read.csv("pml-testing.csv")
+
+prediction <- predict(rfMDL, testing)
+prediction
+```
